@@ -380,6 +380,79 @@ describe("Workflows on ctx.exports", () => {
 		]);
 	});
 
+	test("isolates persisted instances and deletion across exported and bound Workflows", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const options = {
+			resourcePersistencePath: tmp,
+			workers: [
+				worker("exporter", {
+					exports: {
+						...MY_WORKFLOW_EXPORT,
+						OtherWorkflow: { type: "workflow", name: "other-workflow" },
+					},
+				}),
+				worker("bound", {
+					env: {
+						MY_WORKFLOW: {
+							type: "workflow",
+							name: "bound-workflow",
+							worker: "bound",
+							exportName: "MyWorkflow",
+						},
+					},
+				}),
+			],
+		};
+		const workflows = [
+			{ workerName: "exporter", query: "workflow=MyWorkflow" },
+			{ workerName: "exporter", query: "workflow=OtherWorkflow" },
+			{ workerName: "bound", query: "binding=MY_WORKFLOW" },
+		];
+		const original = new Miniflare(options);
+		useDispose(original);
+		for (const { workerName, query } of workflows) {
+			const worker = await original.getWorker(workerName);
+			const fetch: Fetch = (url) => worker.fetch(url);
+			await fetchJson(fetch, `/create?${query}&id=shared-id`);
+			await waitForStatus(fetch, `${query}&id=shared-id`, "complete");
+		}
+		await original.dispose();
+
+		const restarted = new Miniflare(options);
+		useDispose(restarted);
+		const exporter = await restarted.getWorker("exporter");
+		const exportedFetch: Fetch = (url) => exporter.fetch(url);
+		await fetchJson(exportedFetch, "/delete?id=shared-id");
+		const deleted = await exporter.fetch(
+			"http://localhost/status?id=shared-id"
+		);
+		expect(deleted.status).toBe(500);
+		expect(await deleted.text()).toContain("instance.not_found");
+		for (const { workerName, query } of workflows.slice(1)) {
+			const worker = await restarted.getWorker(workerName);
+			expect(
+				await waitForStatus(
+					(url) => worker.fetch(url),
+					`${query}&id=shared-id`,
+					"complete"
+				)
+			).toMatchObject({ output: ["step-0"] });
+		}
+		await fetchJson(exportedFetch, "/create?id=shared-id");
+		expect(
+			await waitForStatus(exportedFetch, "id=shared-id", "complete")
+		).toMatchObject({ output: ["step-0"] });
+		expect(
+			(await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME))).sort()
+		).toEqual([
+			"miniflare-workflows-bound-workflow",
+			"miniflare-workflows-my-workflow",
+			"miniflare-workflows-other-workflow",
+		]);
+	});
+
 	test.for([
 		{ label: "declared only in exports", bound: false },
 		{ label: "also bound in env", bound: true },
