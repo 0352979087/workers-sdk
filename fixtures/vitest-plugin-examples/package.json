@@ -35,7 +35,7 @@
 		"typegen:workflows-exports": "wrangler types ./workflows-exports/src/env.d.ts -c ./workflows-exports/wrangler.jsonc --no-include-runtime"
 	},
 	"devDependencies": {
-		"@better-auth/stripe": "^1.4.6",
+		"@better-auth/stripe": "^1.6.21",
 		"@cloudflare/containers": "^0.2.2",
 		"@cloudflare/vitest-plugin": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
@@ -45,7 +45,7 @@
 		"@types/node": "catalog:default",
 		"@types/nunjucks": "^3.2.6",
 		"@vitest/ui": "catalog:vitest5",
-		"better-auth": "^1.4.6",
+		"better-auth": "^1.6.22",
 		"cf": "catalog:default",
 		"cjs-wasm-module-dep": "file:./module-resolution/vendor/cjs-wasm-module-dep",
 		"discord-api-types": "0.37.98",

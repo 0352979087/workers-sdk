@@ -43,7 +43,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@types/ws": "^8.5.13",
+		"@types/ws": "^8.18.2",
 		"capnweb": "catalog:default",
 		"esbuild": "catalog:default",
 		"tsdown": "0.16.3",
